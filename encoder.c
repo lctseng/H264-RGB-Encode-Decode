@@ -30,7 +30,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <x264.h>
+
+#include <stdbool.h>
 
 #define FAIL_IF_ERROR( cond, ... )\
 do\
@@ -43,40 +46,32 @@ do\
 } while( 0 )
 
 
+int encoder_raw_frame_size = 0;
+x264_picture_t encoder_pic;
+x264_picture_t encoder_pic_out;
+bool encoder_pic_valid = false;
+int endoder_i_frame;
+x264_nal_t *encoder_nal;
+int encoder_i_nal;
+
+x264_t* encoder_h264_encoder = NULL;
+
+void encoder_cleanup(){
+  if(encoder_h264_encoder){
+    x264_encoder_close( encoder_h264_encoder );
+    encoder_h264_encoder = NULL;
+  }
+  if(encoder_pic_valid){
+    x264_picture_clean( &encoder_pic );
+    encoder_pic_valid = false;
+  }
+}
+
 int encoder_init(int width, int height){
-  
-
-}
-
-int encoder_cleanup(){
-  
-}
-
-
-int encoder_encode(uint8_t* rgb_data, uint8_t** encoded_buf, int* encoded_size){
-  
-}
-
-
-int main( int argc, char **argv )
-{
-    int width, height;
     x264_param_t param;
-    x264_picture_t pic;
-    x264_picture_t pic_out;
-    x264_t *h;
-    int i_frame = 0;
-    int i_frame_size;
-    x264_nal_t *nal;
-    int i_nal;
 
-
-    FAIL_IF_ERROR( !(argc > 1), "Example usage: encoder 352x288 <input.rgb >output.h264\n" );
-    FAIL_IF_ERROR( 2 != sscanf( argv[1], "%dx%d", &width, &height ), "resolution not specified or incorrect\n" );
-
-    /* Get default params for preset/tuning */
-    //if( x264_param_default_preset( &param, "medium", NULL ) < 0 )
-    //    goto fail;
+    encoder_raw_frame_size = width * height * 3;
+    endoder_i_frame = 0;
 
     /* Get default params for preset/tuning */
     x264_param_default(&param);
@@ -90,74 +85,153 @@ int main( int argc, char **argv )
     param.b_annexb = 1;
     param.rc.i_qp_constant = 0;
     param.rc.i_rc_method = X264_RC_CQP;
-
-    param.i_fps_num = 50;
-
-    /* Apply profile restrictions. */
-    /*
-    if( x264_param_apply_profile( &param, "high" ) < 0 )
-        goto fail;
-    */
-
-    if( x264_picture_alloc( &pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
-        goto fail;
+    // alloc picture
+    if( x264_picture_alloc( &encoder_pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
+      printf("Fail to allocate picture buffer");
+      encoder_cleanup();
+      return -1;
     }
-#undef fail
-#define fail fail2
-
-    h = x264_encoder_open( &param );
-    if( !h )
-        goto fail;
-#undef fail
-#define fail fail3
-
-    
-    int luma_size = width * height * 3;
-    
-    fprintf(stderr,"Plane number: %d\n", pic.img.i_plane);
-    /* Encode frames */
-    for( ;; i_frame++ )
-    {
-        fprintf(stderr,"Loading frame: %d\n", i_frame);
-        /* Read input frame */
-        if( fread( pic.img.plane[0], 1, luma_size, stdin ) != luma_size )
-            break;
-
-        pic.i_pts = i_frame;
-        i_frame_size = x264_encoder_encode( h, &nal, &i_nal, &pic, &pic_out );
-        if( i_frame_size < 0 )
-            goto fail;
-        else if( i_frame_size )
-        {
-          fprintf(stderr,"Emitting encoded frame, size = %d\n",i_frame_size);
-          if( !fwrite( nal->p_payload, i_frame_size, 1, stdout ) )
-            goto fail;
-        }
+    encoder_pic_valid = true;
+    // open encoder
+    encoder_h264_encoder = x264_encoder_open( &param );
+    if( !encoder_h264_encoder ){
+      printf("Fail to allocate open encoder");
+      encoder_cleanup();
+      return -1;
     }
-    fprintf(stderr,"End of frame input, emitting delayed frame\n");
-    /* Flush delayed frames */
-    while( x264_encoder_delayed_frames( h ) )
-    {
-        i_frame_size = x264_encoder_encode( h, &nal, &i_nal, NULL, &pic_out );
-        if( i_frame_size < 0 )
-            goto fail;
-        else if( i_frame_size )
-        {
-            fprintf(stderr,"[Delayed] Emitting encoded frame, size = %d\n",i_frame_size);
-            if( !fwrite( nal->p_payload, i_frame_size, 1, stdout ) )
-                goto fail;
-        }
-    }
-
-    x264_encoder_close( h );
-    x264_picture_clean( &pic );
     return 0;
+}
 
-#undef fail
-fail3:
-    x264_encoder_close( h );
-fail2:
-    x264_picture_clean( &pic );
-fail:
+
+uint8_t* encoder_get_raw_data_buf(){
+  return encoder_pic.img.plane[0];
+}
+
+
+
+// assume the RGB-raw data already in "encoder_get_raw_data_buf()"
+// param p_encoded_buf[out]: points to the buffer if frame emitted, NULL for no frame emitted
+// param p_encoded_size[out]: the size of encoded data, 0 when no frame emitted
+int encoder_encode(uint8_t** p_encoded_buf, int* p_encoded_size){
+  int i_frame_size;
+  encoder_pic.i_pts = endoder_i_frame;
+  i_frame_size = x264_encoder_encode( encoder_h264_encoder, &encoder_nal, &encoder_i_nal, &encoder_pic, &encoder_pic_out );
+  if(i_frame_size < 0){
+    printf("Encoding error");
     return -1;
+  }
+  else if (i_frame_size){
+    *p_encoded_size = i_frame_size;
+    *p_encoded_buf = encoder_nal->p_payload;
+  }
+  else{
+    *p_encoded_size = 0;
+    *p_encoded_buf = NULL;
+  }
+  return 0;
+}
+
+// when end of raw data
+// flush the frame in encoder
+// when all frames are flushed, p_encoded_buf is set to NULL and p_encoded_size is set to 0
+int encoder_flush(uint8_t** p_encoded_buf, int* p_encoded_size){
+  int i_frame_size;
+  if( x264_encoder_delayed_frames( encoder_h264_encoder ) )
+  {
+    i_frame_size = x264_encoder_encode( encoder_h264_encoder, &encoder_nal, &encoder_i_nal, NULL, &encoder_pic_out );
+    if( i_frame_size < 0 ){
+      printf("Encoding error");
+      return -1;
+    }
+    else if( i_frame_size ){
+      *p_encoded_size = i_frame_size;
+      *p_encoded_buf = encoder_nal->p_payload;
+    }
+    else{
+      *p_encoded_size = 0;
+      *p_encoded_buf = NULL;
+    }
+  }
+  else{
+    *p_encoded_size = 0;
+    *p_encoded_buf = NULL;
+  }
+  return 0;
+}
+
+
+int main( int argc, char **argv ){
+  int width , height;
+  uint8_t* raw_buffer;
+  uint8_t* out_buffer;
+  int out_size;
+  FILE *fp_in, *fp_out;
+  int raw_byte_size;
+
+  int out_count = 0;
+
+  if(argc < 5){
+    printf("Usage: %s [width] [height] [input.rgb] [output.h264]\n", argv[0]);
+    return -1;
+  }
+  
+  // set width and height
+  width = atoi(argv[1]);
+  height = atoi(argv[2]);
+  raw_byte_size = width * height * 3;
+
+  // set input/output file
+  fp_in = fopen(argv[3], "rb");
+  if(!fp_in){
+    printf("Cannot open input file\n");
+    return -1;
+  }
+  fp_out = fopen(argv[4], "wb");
+  if(!fp_out){
+    printf("Cannot open output file\n");
+    return -1;
+  }
+
+  if(encoder_init(width, height) < 0){
+    // no need to cleanup when fail to init
+    printf("Fail to init encoder\n");
+    return -1;
+  }
+  // from now on, cleanup is needed
+
+  raw_buffer = encoder_get_raw_data_buf();
+  
+  // read frame
+  while(fread(raw_buffer, 1, raw_byte_size, fp_in) > 0){
+    // encode it
+    if(encoder_encode(&out_buffer, &out_size) < 0){
+      printf("Encode error\n");
+      goto fail;
+    }
+    // check if there is output frame
+    if(out_size > 0){
+      printf("Writing frame: %d\n", ++out_count);
+      fwrite(out_buffer, 1, out_size, fp_out);
+    }
+  }
+  // flush delayed frame
+  while(true){
+    if(encoder_flush(&out_buffer, &out_size) < 0){
+      printf("Flush error\n");
+      goto fail;
+    }
+    if(out_size > 0){
+      printf("Writing delayed frame: %d\n", ++out_count);
+      fwrite(out_buffer, 1, out_size, fp_out);
+    }
+    else{
+      // all frame are flushed
+      break;
+    }
+  }
+fail:
+  fclose(fp_in);
+  fclose(fp_out);
+  encoder_cleanup();
+  return 0;
 }
