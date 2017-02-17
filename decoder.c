@@ -229,10 +229,7 @@ int main(int argc, char* argv[]){
   decoder_data.frame_handler = on_frame_ready;
   
   while(( cur_size = fread(in_buffer, 1, IN_BUFFER_SIZE, fp_in)) > 0){
-    int generated = decoder_parse(in_buffer, cur_size);
-    if(generated > 0){
-      printf("%d frames generated\n", generated);
-    }
+    decoder_parse(in_buffer, cur_size);
   }
   // flush parser
   decoder_parse(NULL, 0);
