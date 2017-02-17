@@ -74,7 +74,7 @@ int encoder_init(int width, int height){
     endoder_i_frame = 0;
 
     /* Get default params for preset/tuning */
-    x264_param_default(&param);
+    x264_param_default_preset( &param, NULL, "zerolatency" );
     /* Configure non-default params */
     // param.i_csp = X264_CSP_I420;
     param.i_csp = X264_CSP_RGB;
@@ -87,7 +87,7 @@ int encoder_init(int width, int height){
     param.rc.i_rc_method = X264_RC_CQP;
     // alloc picture
     if( x264_picture_alloc( &encoder_pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
-      printf("Fail to allocate picture buffer");
+      printf("Fail to allocate picture buffer\n");
       encoder_cleanup();
       return -1;
     }
@@ -95,7 +95,7 @@ int encoder_init(int width, int height){
     // open encoder
     encoder_h264_encoder = x264_encoder_open( &param );
     if( !encoder_h264_encoder ){
-      printf("Fail to allocate open encoder");
+      printf("Fail to allocate open encoder\n");
       encoder_cleanup();
       return -1;
     }
@@ -117,7 +117,7 @@ int encoder_encode(uint8_t** p_encoded_buf, int* p_encoded_size){
   encoder_pic.i_pts = endoder_i_frame;
   i_frame_size = x264_encoder_encode( encoder_h264_encoder, &encoder_nal, &encoder_i_nal, &encoder_pic, &encoder_pic_out );
   if(i_frame_size < 0){
-    printf("Encoding error");
+    printf("Encoding error\n");
     return -1;
   }
   else if (i_frame_size){
@@ -131,35 +131,6 @@ int encoder_encode(uint8_t** p_encoded_buf, int* p_encoded_size){
   return 0;
 }
 
-// when end of raw data
-// flush the frame in encoder
-// when all frames are flushed, p_encoded_buf is set to NULL and p_encoded_size is set to 0
-int encoder_flush(uint8_t** p_encoded_buf, int* p_encoded_size){
-  int i_frame_size;
-  if( x264_encoder_delayed_frames( encoder_h264_encoder ) )
-  {
-    i_frame_size = x264_encoder_encode( encoder_h264_encoder, &encoder_nal, &encoder_i_nal, NULL, &encoder_pic_out );
-    if( i_frame_size < 0 ){
-      printf("Encoding error");
-      return -1;
-    }
-    else if( i_frame_size ){
-      *p_encoded_size = i_frame_size;
-      *p_encoded_buf = encoder_nal->p_payload;
-    }
-    else{
-      *p_encoded_size = 0;
-      *p_encoded_buf = NULL;
-    }
-  }
-  else{
-    *p_encoded_size = 0;
-    *p_encoded_buf = NULL;
-  }
-  return 0;
-}
-
-
 int main( int argc, char **argv ){
   int width , height;
   uint8_t* raw_buffer;
@@ -168,6 +139,7 @@ int main( int argc, char **argv ){
   FILE *fp_in, *fp_out;
   int raw_byte_size;
 
+  int in_count = 0;
   int out_count = 0;
 
   if(argc < 5){
@@ -203,32 +175,21 @@ int main( int argc, char **argv ){
   
   // read frame
   while(fread(raw_buffer, 1, raw_byte_size, fp_in) > 0){
+    printf("Reading frame: %d\n", ++in_count);
     // encode it
     if(encoder_encode(&out_buffer, &out_size) < 0){
       printf("Encode error\n");
       goto fail;
     }
     // check if there is output frame
+    // but we should always have output
     if(out_size > 0){
       printf("Writing frame: %d\n", ++out_count);
       fwrite(out_buffer, 1, out_size, fp_out);
     }
   }
-  // flush delayed frame
-  while(true){
-    if(encoder_flush(&out_buffer, &out_size) < 0){
-      printf("Flush error\n");
-      goto fail;
-    }
-    if(out_size > 0){
-      printf("Writing delayed frame: %d\n", ++out_count);
-      fwrite(out_buffer, 1, out_size, fp_out);
-    }
-    else{
-      // all frame are flushed
-      break;
-    }
-  }
+  // There MUST be no delayed frames
+  
 fail:
   fclose(fp_in);
   fclose(fp_out);
