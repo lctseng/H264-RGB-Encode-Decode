@@ -1,33 +1,3 @@
-/*****************************************************************************
- * example.c: libx264 API usage example
- *****************************************************************************
- * Copyright (C) 2014-2017 x264 project
- *
- * Authors: Anton Mitrofanov <BugMaster@narod.ru>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
- *
- * This program is also available under a commercial proprietary license.
- * For more information, contact us at licensing@x264.com.
- *****************************************************************************/
-
-#ifdef _WIN32
-#include <io.h>       /* _setmode() */
-#include <fcntl.h>    /* _O_BINARY */
-#endif
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,43 +5,37 @@
 
 #include <stdbool.h>
 
-#define FAIL_IF_ERROR( cond, ... )\
-do\
-{\
-    if( cond )\
-    {\
-        fprintf( stderr, __VA_ARGS__ );\
-        goto fail;\
-    }\
-} while( 0 )
+struct{
+  int raw_frame_size;
+  x264_picture_t pic;
+  x264_picture_t pic_out;
+  bool pic_valid;
+  int i_frame;
+  x264_nal_t *nal;
+  int i_nal;
 
+  x264_t* h264_encoder;
+} encoder_data;
 
-int encoder_raw_frame_size = 0;
-x264_picture_t encoder_pic;
-x264_picture_t encoder_pic_out;
-bool encoder_pic_valid = false;
-int endoder_i_frame;
-x264_nal_t *encoder_nal;
-int encoder_i_nal;
-
-x264_t* encoder_h264_encoder = NULL;
 
 void encoder_cleanup(){
-  if(encoder_h264_encoder){
-    x264_encoder_close( encoder_h264_encoder );
-    encoder_h264_encoder = NULL;
+  if(encoder_data.h264_encoder){
+    x264_encoder_close( encoder_data.h264_encoder );
+    encoder_data.h264_encoder = NULL;
   }
-  if(encoder_pic_valid){
-    x264_picture_clean( &encoder_pic );
-    encoder_pic_valid = false;
+  if(encoder_data.pic_valid){
+    x264_picture_clean( &encoder_data.pic );
+    encoder_data.pic_valid = false;
   }
 }
 
 int encoder_init(int width, int height){
     x264_param_t param;
 
-    encoder_raw_frame_size = width * height * 3;
-    endoder_i_frame = 0;
+    encoder_data.raw_frame_size = width * height * 3;
+    encoder_data.i_frame = 0;
+    encoder_data.h264_encoder = NULL;
+    encoder_data.pic_valid = true;
 
     /* Get default params for preset/tuning */
     x264_param_default_preset( &param, NULL, "zerolatency" );
@@ -86,15 +50,14 @@ int encoder_init(int width, int height){
     param.rc.i_qp_constant = 0;
     param.rc.i_rc_method = X264_RC_CQP;
     // alloc picture
-    if( x264_picture_alloc( &encoder_pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
+    if( x264_picture_alloc( &encoder_data.pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
       printf("Fail to allocate picture buffer\n");
       encoder_cleanup();
       return -1;
     }
-    encoder_pic_valid = true;
     // open encoder
-    encoder_h264_encoder = x264_encoder_open( &param );
-    if( !encoder_h264_encoder ){
+    encoder_data.h264_encoder = x264_encoder_open( &param );
+    if( !encoder_data.h264_encoder ){
       printf("Fail to allocate open encoder\n");
       encoder_cleanup();
       return -1;
@@ -104,7 +67,7 @@ int encoder_init(int width, int height){
 
 
 uint8_t* encoder_get_raw_data_buf(){
-  return encoder_pic.img.plane[0];
+  return encoder_data.pic.img.plane[0];
 }
 
 
@@ -114,15 +77,15 @@ uint8_t* encoder_get_raw_data_buf(){
 // param p_encoded_size[out]: the size of encoded data, 0 when no frame emitted
 int encoder_encode(uint8_t** p_encoded_buf, int* p_encoded_size){
   int i_frame_size;
-  encoder_pic.i_pts = endoder_i_frame;
-  i_frame_size = x264_encoder_encode( encoder_h264_encoder, &encoder_nal, &encoder_i_nal, &encoder_pic, &encoder_pic_out );
+  encoder_data.pic.i_pts = encoder_data.i_frame;
+  i_frame_size = x264_encoder_encode( encoder_data.h264_encoder, &encoder_data.nal, &encoder_data.i_nal, &encoder_data.pic, &encoder_data.pic_out );
   if(i_frame_size < 0){
     printf("Encoding error\n");
     return -1;
   }
   else if (i_frame_size){
     *p_encoded_size = i_frame_size;
-    *p_encoded_buf = encoder_nal->p_payload;
+    *p_encoded_buf = encoder_data.nal->p_payload;
   }
   else{
     *p_encoded_size = 0;
