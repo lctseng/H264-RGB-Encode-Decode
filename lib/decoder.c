@@ -1,11 +1,4 @@
-#include <stdio.h>
-
-#include "libavcodec/avcodec.h"
-#include "libswscale/swscale.h"
-
-#define IN_BUFFER_SIZE 65535
-
-typedef void (*handler_on_frame_ready)(uint8_t* frame_buf, int frame_size);
+#include "decoder.h"
 
 struct {
   struct AVCodec *pCodec;
@@ -29,6 +22,11 @@ struct {
   
 } decoder_data;
 
+handler_on_frame_ready decoder_set_frame_ready_handler(handler_on_frame_ready hnd){
+  handler_on_frame_ready old_hnd = decoder_data.frame_handler;
+  decoder_data.frame_handler = hnd;
+  return old_hnd;
+}
 
 void decoder_cleanup(){
   if(decoder_data.img_convert_ctx){
@@ -189,55 +187,7 @@ int decoder_flush(){
   }
   return frame_formed;
 }
-  
 
-FILE *fp_in, *fp_out;
-
-
-void on_frame_ready(uint8_t* frame_buf, int frame_size){
-  static int count = 0;
-  printf("Frame Ready: %d\n", ++count);
-  fwrite(frame_buf, 1, frame_size, fp_out);
+int decoder_input_buffer_padding_size(){
+  return FF_INPUT_BUFFER_PADDING_SIZE;
 }
-
-uint8_t in_buffer[IN_BUFFER_SIZE + FF_INPUT_BUFFER_PADDING_SIZE]={0};
-
-int main(int argc, char* argv[]){
-  int cur_size;
-
-  if(argc < 3){
-    printf("Usage: %s [input.h264] [output.rgb]\n", argv[0]);
-    return -1;
-  }
-
-  // set input/output file
-  fp_in = fopen(argv[1], "rb");
-  if(!fp_in){
-    printf("Cannot open input file\n");
-    return -1;
-  }
-  fp_out = fopen(argv[2], "wb");
-  if(!fp_out){
-    printf("Cannot open output file\n");
-    return -1;
-  }
-
-  if(decoder_init() < 0){
-    printf("Fail to init decoder\n");
-  }
-
-  decoder_data.frame_handler = on_frame_ready;
-  
-  while(( cur_size = fread(in_buffer, 1, IN_BUFFER_SIZE, fp_in)) > 0){
-    decoder_parse(in_buffer, cur_size);
-  }
-  // flush parser
-  decoder_parse(NULL, 0);
-  decoder_flush();
-
-  decoder_cleanup();
-  fclose(fp_in);
-  fclose(fp_out);
-  return 0;
-}
-
