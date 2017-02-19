@@ -4,7 +4,7 @@ require 'mkmf'
 # Give it a name
 extension_name = 'h264_rgb'
 
-$srcs = ["h264_rgb.c", "lib/decoder.c", "lib/encoder.c"]
+$srcs = ["h264_rgb.c", "rb_encoder.c", "rb_decoder.c", "lib/decoder.c", "lib/encoder.c"]
 $VPATH << "./lib"
 
 $CFLAGS += " -Wno-deprecated-declarations"

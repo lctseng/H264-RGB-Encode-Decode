@@ -1,7 +1,7 @@
 require '../h264_rgb'
 
 if ARGV.size < 4
-  puts "Usage: #{__FILE__} [width] [height] [in_file] [out_file]"
+  puts "Usage: #{__FILE__} [width] [height] [in_file.rgb] [out_file.h264]"
   exit
 end
 

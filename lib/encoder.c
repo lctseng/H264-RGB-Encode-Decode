@@ -1,6 +1,6 @@
 #include "encoder.h"
 
-struct{
+static struct{
   int raw_frame_size;
   x264_picture_t pic;
   x264_picture_t pic_out;

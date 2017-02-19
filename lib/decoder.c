@@ -1,6 +1,6 @@
 #include "decoder.h"
 
-struct {
+static struct {
   struct AVCodec *pCodec;
   struct AVCodecContext *pCodecCtx;
   struct AVCodecParserContext *pCodecParserCtx;
@@ -171,7 +171,6 @@ int decoder_flush(){
       return ret;
     }
     if (!got_picture){
-      fprintf(stderr,"Flush end\n");
       break;
     }
     if (got_picture) {
