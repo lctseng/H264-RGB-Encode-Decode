@@ -4,10 +4,12 @@ require 'mkmf'
 # Give it a name
 extension_name = 'h264_rgb'
 
-$srcs = ["h264_rgb.c", "decoder.c", "encoder.c"]
-$VPATH << "../lib"
+$srcs = ["h264_rgb.c", "lib/decoder.c", "lib/encoder.c"]
+$VPATH << "./lib"
 
-$CXXFLAGS += "-Wno-deprecated-declarations"
+$CFLAGS += " -Wno-deprecated-declarations"
+
+$LIBS += " -lx264 -lswscale -lavcodec -lavutil"
 
 # The destination
 dir_config(extension_name)
