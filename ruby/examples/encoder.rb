@@ -16,7 +16,7 @@ out_file = File.open(out_file_name, "wb")
 
 count = 0
 
-H264_RGB::Encoder.init(352, 288)
+H264_RGB::Encoder.init(width, height)
 File.open(in_file_name, "rb") do |f|
   while len = f.read(in_buf.bytesize, in_buf)
     output = H264_RGB::Encoder.encode(in_buf)
