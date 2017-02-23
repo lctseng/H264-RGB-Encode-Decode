@@ -132,7 +132,7 @@ int decoder_parse(uint8_t* in_buffer, int cur_size){
             decoder_data.pCodecCtx->height, decoder_data.pCodecCtx->pix_fmt,decoder_data.pCodecCtx->width,
             decoder_data.pCodecCtx->height, PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL); 
 
-          decoder_data.pFrameOutput=avcodec_alloc_frame();
+          decoder_data.pFrameOutput=av_frame_alloc();
           decoder_data.out_buffer=(uint8_t *)av_malloc(avpicture_get_size(PIX_FMT_RGB24,
               decoder_data.pCodecCtx->width, decoder_data.pCodecCtx->height));
           avpicture_fill((AVPicture *)decoder_data.pFrameOutput, decoder_data.out_buffer,
