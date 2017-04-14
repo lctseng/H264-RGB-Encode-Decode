@@ -35,20 +35,22 @@ int main( int argc, char **argv ){
     return -1;
   }
 
-  if(encoder_init(width, height) < 0){
+  H264EncoderData* encoder_data;
+
+  if(encoder_init(&encoder_data, width, height) < 0){
     // no need to cleanup when fail to init
     printf("Fail to init encoder\n");
     return -1;
   }
   // from now on, cleanup is needed
 
-  raw_buffer = encoder_get_raw_data_buf();
+  raw_buffer = encoder_get_raw_data_buf(encoder_data);
   
   // read frame
   while(fread(raw_buffer, 1, raw_byte_size, fp_in) > 0){
     printf("Reading frame: %d\n", ++in_count);
     // encode it
-    if(encoder_encode(&out_buffer, &out_size) < 0){
+    if(encoder_encode(encoder_data,&out_buffer, &out_size) < 0){
       printf("Encode error\n");
       goto fail;
     }
@@ -64,6 +66,6 @@ int main( int argc, char **argv ){
 fail:
   fclose(fp_in);
   fclose(fp_out);
-  encoder_cleanup();
+  encoder_dispose(encoder_data);
   return 0;
 }
