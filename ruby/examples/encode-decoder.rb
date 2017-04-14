@@ -23,24 +23,24 @@ h264_stream.force_encoding("ASCII-8BIT")
 rev_rgb_stream.force_encoding("ASCII-8BIT")
 
 
-H264_RGB::Decoder.init
-H264_RGB::Encoder.init(width, height)
+encoder = H264_RGB::Encoder.new(width, height)
+decoder = H264_RGB::Decoder.new
 
 File.open(in_file_name, "rb") do |f|
   while len = f.read(in_buf.bytesize, in_buf)
     rgb_stream << in_buf
-    output = H264_RGB::Encoder.encode(in_buf)
+    output = encoder.encode(in_buf)
     unless output.empty?
       count += 1
       puts "Written [#{count}]: #{output.bytesize}"
       h264_stream << output
-      frames = H264_RGB::Decoder.parse(output)
+      frames = decoder.parse(output)
       frames.each do |frame|
         puts "Got frame!"
         rev_rgb_stream << frame
       end
       if count % 50 == 0
-        frames = H264_RGB::Decoder.flush
+        frames = decoder.flush
         frames.each do |frame|
           puts "[Flush] Got frame!"
           rev_rgb_stream << frame
@@ -51,6 +51,5 @@ File.open(in_file_name, "rb") do |f|
   end
 end
 
-H264_RGB::Decoder.cleanup
-H264_RGB::Encoder.cleanup
-
+decoder.dispose
+encoder.dispose
