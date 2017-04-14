@@ -14,7 +14,7 @@ void Init_h264_rgb() {
   // encoder
   H264_RGB_Encoder = rb_define_class_under(H264_RGB, "Encoder", rb_cObject);
   rb_define_alloc_func(H264_RGB_Encoder, rb_encoder_alloc);
-  rb_define_method(H264_RGB_Encoder, "initialize", rb_encoder_initialize, 2);
+  rb_define_method(H264_RGB_Encoder, "initialize", rb_encoder_initialize, 3);
   rb_define_method(H264_RGB_Encoder, "dispose", rb_encoder_dispose, 0);
   rb_define_method(H264_RGB_Encoder, "encode", rb_encoder_encode, 1);
 

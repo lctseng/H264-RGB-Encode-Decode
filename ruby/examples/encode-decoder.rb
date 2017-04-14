@@ -23,7 +23,7 @@ h264_stream.force_encoding("ASCII-8BIT")
 rev_rgb_stream.force_encoding("ASCII-8BIT")
 
 
-encoder = H264_RGB::Encoder.new(width, height)
+encoder = H264_RGB::Encoder.new(width, height, true)
 decoder = H264_RGB::Decoder.new
 
 File.open(in_file_name, "rb") do |f|

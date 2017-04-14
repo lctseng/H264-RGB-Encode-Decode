@@ -8,7 +8,7 @@ typedef struct {
   H264EncoderData* internal_data;
 } RbEncoderData;
 
-VALUE rb_encoder_initialize(VALUE self, VALUE Qwidth, VALUE Qheight){
+VALUE rb_encoder_initialize(VALUE self, VALUE Qwidth, VALUE Qheight, VALUE Qlossless){
   // unwrap
   RbEncoderData* encoder_data;
   Data_Get_Struct(self, RbEncoderData, encoder_data);
@@ -16,7 +16,7 @@ VALUE rb_encoder_initialize(VALUE self, VALUE Qwidth, VALUE Qheight){
   int width = NUM2INT(Qwidth);
   int height = NUM2INT(Qheight);
   encoder_data->raw_byte_size = width * height * 3;
-  if(encoder_init(&encoder_data->internal_data ,width, height) < 0){
+  if(encoder_init(&encoder_data->internal_data ,width, height, RTEST(Qlossless)) < 0){
     // internal data cannot be allocated
     return Qfalse;
   }
