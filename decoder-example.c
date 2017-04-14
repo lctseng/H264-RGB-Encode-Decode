@@ -33,21 +33,23 @@ int main(int argc, char* argv[]){
     return -1;
   }
 
-  if(decoder_init() < 0){
+  H264DecoderData* decoder_data;
+
+  if(decoder_init(&decoder_data) < 0){
     printf("Fail to init decoder\n");
   }
 
-  decoder_set_frame_ready_handler(on_frame_ready);
+  decoder_set_frame_ready_handler(decoder_data, on_frame_ready);
   in_buffer = malloc(sizeof(uint8_t) * (IN_BUFFER_SIZE + decoder_input_buffer_padding_size()));
   
   while(( cur_size = fread(in_buffer, 1, IN_BUFFER_SIZE, fp_in)) > 0){
-    decoder_parse(in_buffer, cur_size);
+    decoder_parse(decoder_data, in_buffer, cur_size);
   }
   // flush parser
-  decoder_parse(NULL, 0);
-  decoder_flush();
+  decoder_parse(decoder_data, NULL, 0);
+  decoder_flush(decoder_data);
 
-  decoder_cleanup();
+  decoder_dispose(decoder_data);
   fclose(fp_in);
   fclose(fp_out);
   free(in_buffer);
