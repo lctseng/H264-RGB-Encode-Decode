@@ -19,10 +19,11 @@ void Init_h264_rgb() {
   rb_define_method(H264_RGB_Encoder, "encode", rb_encoder_encode, 1);
 
   // decoder
-  H264_RGB_Decoder = rb_define_module_under(H264_RGB, "Decoder");
-  rb_define_module_function(H264_RGB_Decoder, "init", rb_decoder_init, 0);
-  rb_define_module_function(H264_RGB_Decoder, "cleanup", rb_decoder_cleanup, 0);
-  rb_define_module_function(H264_RGB_Decoder, "parse", rb_decoder_parse, 1);
-  rb_define_module_function(H264_RGB_Decoder, "flush", rb_decoder_flush, 0);
+  H264_RGB_Decoder = rb_define_class_under(H264_RGB, "Decoder", rb_cObject);
+  rb_define_alloc_func(H264_RGB_Decoder, rb_decoder_alloc);
+  rb_define_method(H264_RGB_Decoder, "initialize", rb_decoder_initialize, 0);
+  rb_define_method(H264_RGB_Decoder, "dispose", rb_decoder_dispose, 0);
+  rb_define_method(H264_RGB_Decoder, "parse", rb_decoder_parse, 1);
+  rb_define_method(H264_RGB_Decoder, "flush", rb_decoder_flush, 0);
 }
 

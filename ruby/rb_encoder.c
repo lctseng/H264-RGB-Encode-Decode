@@ -90,5 +90,6 @@ void rb_encoder_free(void * ptr){
 
 VALUE rb_encoder_alloc(VALUE self){
   RbEncoderData* data = (RbEncoderData*)malloc(sizeof(RbEncoderData));
+  data->flag_init = false;
   return Data_Wrap_Struct(self,  NULL, rb_encoder_free, data);
 }

@@ -14,23 +14,23 @@ count = 0
 
 in_buf = "0" * 65535
 
-H264_RGB::Decoder.init
+decoder = H264_RGB::Decoder.new
 File.open(in_file_name, "rb") do |f|
   while len = f.read(in_buf.bytesize, in_buf)
-    frames = H264_RGB::Decoder.parse(in_buf)
+    frames = decoder.parse(in_buf)
     frames.each do |output|
       count += 1
       puts "Written [#{count}]: #{output.bytesize}"
       out_file.write output
     end
   end
-  frames = H264_RGB::Decoder.flush
+  frames = decoder.flush
   frames.each do |output|
     count += 1
     puts "Written [delayed] [#{count}]: #{output.bytesize}"
     out_file.write output
   end
 end
-H264_RGB::Decoder.cleanup
 
+decoder.dispose
 out_file.close
