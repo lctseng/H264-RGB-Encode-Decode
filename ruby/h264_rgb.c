@@ -12,10 +12,11 @@ void Init_h264_rgb() {
   H264_RGB = rb_define_module("H264_RGB");
 
   // encoder
-  H264_RGB_Encoder = rb_define_module_under(H264_RGB, "Encoder");
-  rb_define_module_function(H264_RGB_Encoder, "init", rb_encoder_init, 2);
-  rb_define_module_function(H264_RGB_Encoder, "cleanup", rb_encoder_cleanup, 0);
-  rb_define_module_function(H264_RGB_Encoder, "encode", rb_encoder_encode, 1);
+  H264_RGB_Encoder = rb_define_class_under(H264_RGB, "Encoder", rb_cObject);
+  rb_define_alloc_func(H264_RGB_Encoder, rb_encoder_alloc);
+  rb_define_method(H264_RGB_Encoder, "initialize", rb_encoder_initialize, 2);
+  rb_define_method(H264_RGB_Encoder, "dispose", rb_encoder_dispose, 0);
+  rb_define_method(H264_RGB_Encoder, "encode", rb_encoder_encode, 1);
 
   // decoder
   H264_RGB_Decoder = rb_define_module_under(H264_RGB, "Decoder");

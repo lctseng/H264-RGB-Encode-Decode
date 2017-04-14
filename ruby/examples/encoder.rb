@@ -16,10 +16,10 @@ out_file = File.open(out_file_name, "wb")
 
 count = 0
 
-H264_RGB::Encoder.init(width, height)
+encoder = H264_RGB::Encoder.new(width, height)
 File.open(in_file_name, "rb") do |f|
   while len = f.read(in_buf.bytesize, in_buf)
-    output = H264_RGB::Encoder.encode(in_buf)
+    output = encoder.encode(in_buf)
     unless output.empty?
       count += 1
       puts "Written [#{count}]: #{output.bytesize}"
@@ -27,6 +27,5 @@ File.open(in_file_name, "rb") do |f|
     end
   end
 end
-H264_RGB::Encoder.cleanup
 
 out_file.close
