@@ -130,7 +130,7 @@ int decoder_parse(H264DecoderData* decoder_data, uint8_t* in_buffer, int cur_siz
           decoder_data->pFrameOutput->data, decoder_data->pFrameOutput->linesize);
 
         if(decoder_data->frame_handler){
-          decoder_data->frame_handler(decoder_data->pFrameOutput->data[0], decoder_data->output_size);
+          decoder_data->frame_handler(decoder_data, decoder_data->pFrameOutput->data[0], decoder_data->output_size);
         }
       }
     }
@@ -160,7 +160,7 @@ int decoder_flush(H264DecoderData* decoder_data){
         decoder_data->pFrameOutput->data, decoder_data->pFrameOutput->linesize);
 
       if(decoder_data->frame_handler){
-        decoder_data->frame_handler(decoder_data->pFrameOutput->data[0], decoder_data->output_size);
+        decoder_data->frame_handler(decoder_data, decoder_data->pFrameOutput->data[0], decoder_data->output_size);
       }
     }
   }

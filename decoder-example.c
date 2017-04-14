@@ -5,7 +5,7 @@
 
 FILE *fp_in, *fp_out;
 
-void on_frame_ready(uint8_t* frame_buf, int frame_size){
+void on_frame_ready(H264DecoderData* decoder_data, uint8_t* frame_buf, int frame_size){
   static int count = 0;
   printf("Frame Ready: %d\n", ++count);
   fwrite(frame_buf, 1, frame_size, fp_out);

@@ -3,9 +3,11 @@
 #include "libavcodec/avcodec.h"
 #include "libswscale/swscale.h"
 
-typedef void (*handler_on_frame_ready)(uint8_t* frame_buf, int frame_size);
+struct _H264DecoderData;
 
-typedef struct {
+typedef void (*handler_on_frame_ready)(struct _H264DecoderData* decoder_data, uint8_t* frame_buf, int frame_size);
+
+struct _H264DecoderData {
   struct AVCodec *pCodec;
   struct AVCodecContext *pCodecCtx;
   struct AVCodecParserContext *pCodecParserCtx;
@@ -23,9 +25,14 @@ typedef struct {
   int height;
   int output_size;
 
+  void* user_data;
+
   handler_on_frame_ready frame_handler;
   
-} H264DecoderData;
+};
+
+typedef struct _H264DecoderData H264DecoderData;
+
 
 
 int decoder_init(H264DecoderData** p_decoder_data);
