@@ -15,7 +15,7 @@ void encoder_dispose(H264EncoderData* encoder_data){
   free(encoder_data);
 }
 
-int encoder_init(H264EncoderData** p_encoder_data, int width, int height){
+int encoder_init(H264EncoderData** p_encoder_data, int width, int height, bool lossless){
   
   // malloc new context
   H264EncoderData* encoder_data;
@@ -38,8 +38,10 @@ int encoder_init(H264EncoderData** p_encoder_data, int width, int height){
   param.b_vfr_input = 0;
   param.b_repeat_headers = 1;
   param.b_annexb = 1;
-  param.rc.i_qp_constant = 0;
-  param.rc.i_rc_method = X264_RC_CQP;
+  if(lossless){
+    param.rc.i_rc_method = X264_RC_CQP;
+    param.rc.i_qp_constant = 0;
+  }
   // alloc picture
   if( x264_picture_alloc( &encoder_data->pic, param.i_csp, param.i_width, param.i_height ) < 0 ){
     printf("Fail to allocate picture buffer\n");

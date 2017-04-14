@@ -37,7 +37,7 @@ int main( int argc, char **argv ){
 
   H264EncoderData* encoder_data;
 
-  if(encoder_init(&encoder_data, width, height) < 0){
+  if(encoder_init(&encoder_data, width, height, false) < 0){
     // no need to cleanup when fail to init
     printf("Fail to init encoder\n");
     return -1;
